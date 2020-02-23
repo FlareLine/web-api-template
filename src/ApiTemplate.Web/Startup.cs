@@ -1,48 +1,93 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.IO;
+using System.Net;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace ApiTemplate.Web
 {
+	/// <summary>
+	/// Class to set up application services and configuration.
+	/// </summary>
 	public class Startup
 	{
+		/// <summary>
+		/// Create a new <see cref="Startup"/> instance with the specified configuration.
+		/// </summary>
+		/// <param name="configuration">Configuration instance.</param>
 		public Startup(IConfiguration configuration)
 		{
 			Configuration = configuration;
 		}
 
+		/// <summary>
+		/// Application configuration.
+		/// </summary>
 		public IConfiguration Configuration { get; }
 
-		// This method gets called by the runtime. Use this method to add services to the container.
+		/// <summary>
+		/// Set up any required service configuration.
+		/// </summary>
+		/// <param name="services"><see cref="IServiceCollection"/> for configured services.</param>
 		public void ConfigureServices(IServiceCollection services)
 		{
-			services.AddControllers();
+			services
+				.AddMvc(options => options.EnableEndpointRouting = false)
+				.SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
 		}
 
-		// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+		/// <summary>
+		/// Method to configure HTTP request pipeline.
+		/// </summary>
+		/// <param name="app"><see cref="IApplicationBuilder"/> instance.</param>
+		/// <param name="env"><see cref="IWebHostEnvironment"/> instance.</param>
 		public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
 		{
 			if (env.IsDevelopment())
 			{
 				app.UseDeveloperExceptionPage();
 			}
+			else
+			{
+				app.UseHsts();
+			}
 
-			app.UseHttpsRedirection();
+			app.UseExceptionHandler(new ExceptionHandlerOptions
+			{
+				ExceptionHandler = HandleException
+			});
 
-			app.UseRouting();
+			app.UseMvc();
+		}
 
-			app.UseAuthorization();
+		private static async Task HandleException(HttpContext context)
+		{
+			context.Response.StatusCode = (int) HttpStatusCode.InternalServerError;
 
-			app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+			var exceptionHandler = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+
+			if (exceptionHandler == null)
+			{
+				return;
+			}
+
+			var error = new
+			{
+				message = exceptionHandler.Message
+			};
+
+			context.Response.ContentType = "application/json";
+
+			await using var writer = new StreamWriter(context.Response.Body);
+			await writer.WriteAsync(JsonSerializer.Serialize(error));
+			await writer.FlushAsync().ConfigureAwait(false);
 		}
 	}
 }

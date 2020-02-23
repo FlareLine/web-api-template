@@ -1,23 +1,32 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace ApiTemplate.Web
 {
-	public class Program
+	/// <summary>
+	/// Program entry-point.
+	/// </summary>
+	public static class Program
 	{
+		/// <summary>
+		/// Program entry-point.
+		/// </summary>
 		public static void Main(string[] args)
 		{
-			CreateHostBuilder(args).Build().Run();
+			CreateWebHostBuilder(args).Build().Run();
 		}
 
-		public static IHostBuilder CreateHostBuilder(string[] args) =>
-			Host.CreateDefaultBuilder(args)
-				.ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); });
+		/// <summary>
+		/// Create the <see cref="IWebHostBuilder"/> for the program.
+		/// </summary>
+		/// <param name="args">Program arguments.</param>
+		/// <returns><see cref="IWebHostBuilder"/> instance.</returns>
+		private static IWebHostBuilder CreateWebHostBuilder(string[] args)
+		{
+			return WebHost
+				.CreateDefaultBuilder(args)
+				.UseKestrel()
+				.UseStartup<Startup>();
+		}
 	}
 }
